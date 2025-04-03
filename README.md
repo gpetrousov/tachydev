@@ -141,8 +141,8 @@ The vehicles **has-a** engine.
 
 # FastAPI
 
-https://fastapi.tiangolo.com/tutorial/path-params/
-https://fastapi.tiangolo.com/tutorial/query-params/
-https://fastapi.tiangolo.com/tutorial/body/
+- https://fastapi.tiangolo.com/tutorial/path-params/
+- https://fastapi.tiangolo.com/tutorial/query-params/
+- https://fastapi.tiangolo.com/tutorial/body/
 
 
