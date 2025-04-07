@@ -145,4 +145,67 @@ The vehicles **has-a** engine.
 - https://fastapi.tiangolo.com/tutorial/query-params/
 - https://fastapi.tiangolo.com/tutorial/body/
 
+---
 
+# SQLAlchemy
+
+- Is an ORM - Object Relational Mapper.
+- Supports many relational DBMS - Database Management Systems
+- Abstracts SQL from the DBMS
+
+---
+# SQL Operations
+
+SQL commands correspond to HTTP operations - CRUD. These operations have the following syntax.
+
+
+#### **INSERT** - Create
+
+To insert data use `INSERT INTO` and `VALUES`.
+
+```SQL
+INSERT INTO todos (title, description, priority, complete, ...)
+
+VALUES ("Groceries", "Do the groceries", 3, False, ...);
+```
+
+
+#### **SELECT** - Read
+
+To extract data use `SELECT`. Use `*` to fetch all rows and columns or specific ones.
+
+```SQL
+SELECT * FROM todos;
+SELECT title, description FROM todos;
+```
+
+
+#### **WHERE**
+
+Specify criteria with `WHERE`.
+
+```SQL
+SELECT * from todos WHERE priority=5;
+SELECT * from todos where title="Groceries";
+SELECT * from todos where id=2;
+```
+
+
+#### **UPDATE** - Update
+
+Update records.
+
+```SQL
+UPDATE todos SET complete=True WHERE id=5;
+UPDATE todos SET complete=True WHERE title="Groceries";
+UPDATE todos set complete=False WHERE id=9;
+```
+
+#### **DELETE** - Delete
+
+Delete records
+
+```SQL
+DELETE FROM todos WHERE id=4;
+DELETE FROM todos WHERE complete=1;
+```
