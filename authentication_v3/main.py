@@ -55,42 +55,29 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def get_password_hash(plain_password: str):
-    pwd_context.hash(plain_password)
-
-
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
-
-
-def authenticate_user(users_db, username: str, password: str):
-    user = get_user(users_db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
-
-
-def fake_decode_token(token):
-    user = get_user(users_db, token)
-    return user
-
-
 async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    token_expired_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired."
+            )
     try:
+        # Verify username JWT token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         print(f"payload: {payload}")
         username = payload.get("sub")
         if username is None:
             raise credentials_exception
+
+        # Verify JWT token did not expire
+        expires = payload.get("exp")
+        if datetime.now(tz=timezone.utc) > datetime.fromtimestamp(expires, tz=timezone.utc):
+            raise token_expired_exception
+
         token_data = TokenData(username=username)
         print(f"token_data: {token_data}")
     except InvalidTokenError:
@@ -106,12 +93,26 @@ async def get_current_active_user(current_user: Annotated[User, Depends(get_curr
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User inactive")
     return current_user
 
-
-def get_hashed_password(password: str):
-    return "fakehashed" + password
-
-
 app = FastAPI()
+
+
+def get_user_from_db(username):
+    if username in users_db:
+        user = UserInDB(**users_db[username])
+        return user
+
+
+def authenticate_user(username, password):
+    """ Authenticates the user if they exist. """
+    # 1.1 Verify user exists in database
+    user = get_user_from_db(username)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found.")
+    # 1.2 Verify password is same as hashed password
+
+    if not verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong password")
+    return user
 
 
 @app.get("/items/")
@@ -119,27 +120,20 @@ async def read_all(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="
     return {"token": token}
 
 
-@app.post("/token")
+@app.post("/login")
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = authenticate_user(users_db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Incorrect username or password",
-                            headers={"WWW-Authenticate": "Bearer"})
+    # 1. Authenticate user
+    user = authenticate_user(form_data.username, form_data.password)
+    print(f"user: {user}")
 
-    # Create access token
-    access_token_expiration_delta = timedelta(minutes=30)
-    data = {"sub": user.username}
-    to_encode = data.copy()
-    if access_token_expiration_delta:
-        expire = datetime.now(timezone.utc) + access_token_expiration_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    # 2. Create JWT access token
+    token_data = {"sub": user.username}
+    expiration_time = datetime.now(tz=timezone.utc) + timedelta(minutes=15)
+    token_data.update({"exp": expiration_time})
+    encoded_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
-    # Return access token
-    return Token(access_token=encoded_jwt, token_type="bearer")
+    # 3. Return access token
+    return Token(access_token=encoded_token, token_type="Bearer")
 
 
 @app.get("/users/me")
