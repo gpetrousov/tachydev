@@ -209,3 +209,28 @@ Delete records
 DELETE FROM todos WHERE id=4;
 DELETE FROM todos WHERE complete=1;
 ```
+
+
+# Authentication - password flow
+
+The user sends a `POST` request to `/login` API endpoint.
+The request contains the `username` and `password` of the user.
+
+The application performs the Login flow:
+
+1. Authenticate user
+    1.1 Verify the user exists in the database (based on the `username`)
+        1.1.1 If the username is in the database return the UserInDB object
+        1.1.2 If the username does not exists in the database return `None`
+    1.2 Verify the provided password with the stored hashed password
+        1.2.1 If verification is False, raise `exception`
+    1.3 Return user item from database
+2. Generate JWT token using the user item
+    2.1 Initialize data: `{"sub": username}`
+    2.2 Add token expiration time: `{"exp": time_delta}`
+    2.3 Join the above into a single dict (`update()`)
+    2.4 Encode it using: `jwt.encode()`
+    2.5 Create the JWT token object with `access_token` and `token_type` fields
+    2.6 Return the JWT token object to the client
+
+
