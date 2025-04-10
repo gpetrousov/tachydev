@@ -55,7 +55,7 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]):
+async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="login"))]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -116,7 +116,7 @@ def authenticate_user(username, password):
 
 
 @app.get("/items/")
-async def read_all(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]):
+async def read_all(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="login"))]):
     """
     Unprotected endpoint. Just expected the Authorization header to be present.
     curl -X 'GET' \
