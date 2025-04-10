@@ -82,7 +82,7 @@ async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(to
         print(f"token_data: {token_data}")
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(users_db, token_data.username)
+    user = get_user_from_db(token_data.username)
     if user is None:
         raise credentials_exception
     return user
@@ -117,11 +117,25 @@ def authenticate_user(username, password):
 
 @app.get("/items/")
 async def read_all(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]):
+    """
+    Unprotected endpoint. Just expected the Authorization header to be present.
+    curl -X 'GET' \
+          'http://127.0.0.1:8000/items/' \
+          -H 'accept: application/json' \
+          -H 'Authorization: BEARER f@k3T0k3N'
+    """
     return {"token": token}
 
 
 @app.post("/login")
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    """
+    Authenticates the client and retursn a JWT token.
+    curl -L -X 'POST' \
+            'http://127.0.0.1:8000/login' \
+            -H 'Content-TYpe: application/x-www-form-urlencoded' \
+            -d "username=bob&password=secret1"
+    """
     # 1. Authenticate user
     user = authenticate_user(form_data.username, form_data.password)
     print(f"user: {user}")
@@ -136,6 +150,13 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     return Token(access_token=encoded_token, token_type="Bearer")
 
 
-@app.get("/users/me")
+@app.get("/protected")
 async def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]):
+    """
+    Protected endpoint. Expects a valid JWT token and performs verification.
+    curl -L -X 'GET' \
+  'http://127.0.0.1:8000/protected' \
+          -H 'accept: application/json' \
+          -H 'Authorization: BEARER eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJib2IiLCJleHAiOjE3NDQyNzkzMTJ9.WWHP9nTFpGfyfcpTrgPxwwZDwyV_mGbeE7qV2lK8glI'
+    """
     return current_user

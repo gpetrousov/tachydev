@@ -213,10 +213,10 @@ DELETE FROM todos WHERE complete=1;
 
 # Authentication - password flow
 
-The user sends a `POST` request to `/login` API endpoint.
-The request contains the `username` and `password` of the user.
+The client sends a `POST` request to `/login` API endpoint.
+The request contains the `username` and `password` of the client.
 
-The application performs the Login flow:
+The backend performs the Login flow:
 
 1. Authenticate user
     1.1 Verify the user exists in the database (based on the `username`)
@@ -233,4 +233,22 @@ The application performs the Login flow:
     2.5 Create the JWT token object with `access_token` and `token_type` fields
     2.6 Return the JWT token object to the client
 
+# Access protected - authorization flow
 
+The client sends a GET request with the following header to the `/protected` endpoint.
+
+```shell
+curl -L -X 'GET' \
+'http://127.0.0.1:8000/protected' \
+        -H 'accept: application/json' \
+        -H 'Authorization: BEARER eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJib2IiLCJleHAiOjE3NDQyNzkzMTJ9.WWHP9nTFpGfyfcpTrgPxwwZDwyV_mGbeE7qV2lK8glI'
+```
+
+The backend performs the following steps:
+1. Decodes the JWT token
+    1.1 Verify "sub" is present
+    1.2 Extract username from "sub"
+    1.2 Verify "exp" has not expired
+2. Get user item from database
+3. Check if user item is disabled
+    3.1 Return user item
