@@ -154,7 +154,15 @@ async def update_me(current_user: Annotated[User, Depends(get_current_user)], up
 
 
 # Delete
-@app.put("/delete")
-async def delete_me():
+
+def delete_user(username):
+    for i in range(len(USERS_DB)):
+        if USERS_DB[i].username == username:
+            USERS_DB.pop(i)
+            break
+
+
+@app.put("/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(current_user: Annotated[User, Depends(get_current_user)]):
     """ Delete my user record """
-    pass
+    delete_user(current_user.username)
