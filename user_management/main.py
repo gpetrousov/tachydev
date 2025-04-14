@@ -144,9 +144,13 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
 
 
 # Update
-@app.put("/update")
-async def update_me():
+@app.put("/update", status_code=status.HTTP_204_NO_CONTENT)
+async def update_me(current_user: Annotated[User, Depends(get_current_user)], updated_user: UserRequest):
     """ Update my information """
+    print(f"Update user: {updated_user}")
+    current_user.username = updated_user.username
+    current_user.hashed_password = bcrypt_context.hash(updated_user.password)
+    current_user.email = updated_user.email
 
 
 # Delete
