@@ -1,12 +1,13 @@
 from fastapi import FastAPI, status, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, Annotated
+from typing import Annotated
 from datetime import datetime, timezone, timedelta
-from jwt import encode
+import jwt
 
 ALGORITHM = "HS256"
 SECRET_KEY = "48e3e8917fc1aa0569121e0b95923ef8e9978e7cacb7f113968bed6942788f83"
+USERS_DB = []
+bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class JWTToken(BaseModel):
@@ -16,14 +17,10 @@ class JWTToken(BaseModel):
 
 class User(BaseModel):
     username: str
-    password: str
+    hashed_password: str
     email: EmailStr
     active: bool = True
-    id: int = 0
-
-
-class UserInDB(User):
-    hashed_pasword: str
+    id: int
 
 
 class UserRequest(BaseModel):
@@ -31,8 +28,15 @@ class UserRequest(BaseModel):
     password: str = Field(min_length=6)
     email: str = Field(min_length=4)
 
-
-USERS_DB = []
+    model_config = {
+            "json_schema_extra": {
+                "example": {
+                    "username": "ioannis",
+                    "password": "ioannis123",
+                    "email": "contact@petrousoft.com"
+                    }
+                }
+            }
 
 
 app = FastAPI()
@@ -43,21 +47,34 @@ async def get_users():
     return USERS_DB
 
 
+def set_user_id():
+    print("Set id")
+    if len(USERS_DB) > 0:
+        return USERS_DB[-1].id + 1
+    else:
+        return 1
+
+
+def get_user_from_db(username):
+    for u in USERS_DB:
+        if username == u.username:
+            return u
+
+
+
+
 # Create
-def set_user_id(user: User):
-    user.id = USERS_DB[-1].id + 1 if len(USERS_DB) > 0 else 1
-
-
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_new_user(new_user: UserRequest):
     """ Register new user and add to the database """
-    new_user = User(**new_user.model_dump())
-    set_user_id(new_user)
+    new_user = User(
+            username=new_user.username,
+            hashed_password=bcrypt_context.hash(new_user.password),
+            email=new_user.email,
+            id=set_user_id()
+            )
     USERS_DB.append(new_user)
-
-
-def hash_password(password):
-    return f"hashed({password})hashed"
+    return new_user
 
 
 def authenticate_user(username, password):
@@ -82,7 +99,7 @@ def authenticate_user(username, password):
     return existing_user
 
 
-@app.post("/login")
+@app.post("/login", response_model=JWTToken)
 async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
     """ Login and return JWT token """
 
@@ -92,10 +109,11 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
     # Create JWT token
-    to_encrypt = {"sub": user.uname}
+    to_encrypt = {"sub": user.username}
     exp_time = datetime.now(timezone.utc) + timedelta(minutes=5)
     to_encrypt.update({"exp": exp_time})
-    encoded_jwt = encode(to_encrypt, SECRET_KEY, ALGORITHM)
+    encoded_jwt = jwt.encode(to_encrypt, SECRET_KEY, ALGORITHM)
+
     return JWTToken(access_token=encoded_jwt, token_type="Bearer")
 
 
@@ -116,5 +134,4 @@ async def update_me():
 @app.put("/delete")
 async def delete_me():
     """ Delete my user record """
-    pass
     pass
