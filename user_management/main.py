@@ -1,8 +1,11 @@
 from fastapi import FastAPI, status, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel, Field, EmailStr
 from typing import Annotated
 from datetime import datetime, timezone, timedelta
 import jwt
+from jwt.exceptions import InvalidTokenError
+from passlib.context import CryptContext
 
 ALGORITHM = "HS256"
 SECRET_KEY = "48e3e8917fc1aa0569121e0b95923ef8e9978e7cacb7f113968bed6942788f83"
@@ -61,6 +64,22 @@ def get_user_from_db(username):
             return u
 
 
+async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="login"))]):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="U/name missing.")
+        expires = payload.get("exp")
+        if datetime.now(timezone.utc) > datetime.fromtimestamp(expires, timezone.utc):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired.")
+    except InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token error.")
+
+    user = get_user_from_db(username)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="U/name not found")
+    return user
 
 
 # Create
@@ -86,17 +105,17 @@ def authenticate_user(username, password):
     # Validate username
     existing_user = None
     for u in USERS_DB:
-        if u.uname == username:
-            existing_user = UserInDB(**u)
+        if u.username == username:
+            existing_user = u
             break
     if existing_user is None:
         return None
 
     # Validate password
-    if existing_user.hashed_password != hash_password(password):
+    if not bcrypt_context.verify(password, existing_user.hashed_password):
         return None
 
-    return existing_user
+    return u
 
 
 @app.post("/login", response_model=JWTToken)
@@ -118,10 +137,10 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
 
 
 # Read
-@app.get("/me")
-async def get_me():
+@app.get("/me", status_code=status.HTTP_200_OK)
+async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
     """ Get my information """
-    pass
+    return current_user
 
 
 # Update
