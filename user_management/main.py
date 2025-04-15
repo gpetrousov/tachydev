@@ -86,6 +86,8 @@ async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(to
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_new_user(new_user: UserRequest):
     """ Register new user and add to the database """
+    if get_user_from_db(new_user.username) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username exists")
     new_user = User(
             username=new_user.username,
             hashed_password=bcrypt_context.hash(new_user.password),
