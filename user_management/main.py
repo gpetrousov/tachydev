@@ -47,6 +47,7 @@ app = FastAPI()
 
 @app.get("/")
 async def get_users():
+    """ Return the usersDB - unprotected endpoint """
     return USERS_DB
 
 
@@ -99,10 +100,7 @@ async def register_new_user(new_user: UserRequest):
 
 
 def authenticate_user(username, password):
-    """
-    Validate username
-    Validate password
-    """
+    """ Validate username;Validate password """
 
     # Validate username
     existing_user = None
@@ -141,14 +139,14 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
 # Read
 @app.get("/me", status_code=status.HTTP_200_OK)
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
-    """ Get my information """
+    """ Get my user information """
     return current_user
 
 
 # Update
 @app.put("/update", status_code=status.HTTP_204_NO_CONTENT)
 async def update_me(current_user: Annotated[User, Depends(get_current_user)], updated_user: UserRequest):
-    """ Update my information """
+    """ Update my user information """
     print(f"Update user: {updated_user}")
     current_user.username = updated_user.username
     current_user.hashed_password = bcrypt_context.hash(updated_user.password)
@@ -156,7 +154,6 @@ async def update_me(current_user: Annotated[User, Depends(get_current_user)], up
 
 
 # Delete
-
 def delete_user(username):
     for i in range(len(USERS_DB)):
         if USERS_DB[i].username == username:
