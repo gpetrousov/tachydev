@@ -148,6 +148,8 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
 async def update_me(current_user: Annotated[User, Depends(get_current_user)], updated_user: UserRequest):
     """ Update my user information """
     print(f"Update user: {updated_user}")
+    if get_user_from_db(updated_user.username) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username exists")
     current_user.username = updated_user.username
     current_user.hashed_password = bcrypt_context.hash(updated_user.password)
     current_user.email = updated_user.email
