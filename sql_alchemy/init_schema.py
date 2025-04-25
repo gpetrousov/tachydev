@@ -53,7 +53,7 @@ class User(Base):
 
 
 # 2. establish connectivity to the engine
-engine = create_engine("sqlite:///sqlite.db", echo=True)
+engine = create_engine("sqlite:///user_management.db", echo=True)
 
 # 3. create database schema - once
 Base.metadata.create_all(bind=engine)
