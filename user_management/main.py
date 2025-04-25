@@ -1,16 +1,22 @@
 from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 from typing import Annotated
 from datetime import datetime, timezone, timedelta
 import jwt
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, sessionmaker
+from sqlalchemy import Integer, String, Boolean, create_engine, select, insert, update, delete
 
 ALGORITHM = "HS256"
 SECRET_KEY = "48e3e8917fc1aa0569121e0b95923ef8e9978e7cacb7f113968bed6942788f83"
-USERS_DB = []
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+engine = create_engine("sqlite:///user_management.db", echo=True)
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class JWTToken(BaseModel):
@@ -18,12 +24,13 @@ class JWTToken(BaseModel):
     token_type: str
 
 
-class User(BaseModel):
-    username: str
-    hashed_password: str
-    email: EmailStr
-    active: bool = True
-    id: int
+class User(Base):
+    __tablename__ = "users"
+    username: Mapped[str] = mapped_column(String(8), unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(8))
+    email: Mapped[str] = mapped_column(String)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    id: Mapped[int] = mapped_column(Integer, unique=True, primary_key=True)
 
 
 class UserRequest(BaseModel):
@@ -42,27 +49,32 @@ class UserRequest(BaseModel):
             }
 
 
+Base.metadata.create_all(bind=engine)
+Session = sessionmaker(engine)
 app = FastAPI()
 
 
+# READ - SELECT
 @app.get("/")
 async def get_users():
     """ Return the usersDB - unprotected endpoint """
-    return USERS_DB
-
-
-def set_user_id():
-    print("Set id")
-    if len(USERS_DB) > 0:
-        return USERS_DB[-1].id + 1
-    else:
-        return 1
+    with Session() as sess:
+        orm_statement = select(User)
+        try:
+            result = sess.execute(orm_statement)
+            return result.scalars().all()
+        except Exception as e:
+            print(f"get_users(): {e}")
 
 
 def get_user_from_db(username):
-    for u in USERS_DB:
-        if username == u.username:
-            return u
+    orm_statement = select(User).where(User.username == username)
+    with Session() as sess:
+        try:
+            existing_user = sess.execute(orm_statement).scalar_one_or_none()
+        except Exception as e:
+            print(f"get_user_from_db: {e}")
+    return existing_user
 
 
 async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="login"))]):
@@ -83,31 +95,31 @@ async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(to
     return user
 
 
-# Create
+# CREATE - INSERT
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_new_user(new_user: UserRequest):
     """ Register new user and add to the database """
-    if get_user_from_db(new_user.username) is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username exists")
-    new_user = User(
+    existing_user = get_user_from_db(new_user.username)
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User exists")
+    insert_orm_statement = insert(User).values(
             username=new_user.username,
-            hashed_password=bcrypt_context.hash(new_user.password),
             email=new_user.email,
-            id=set_user_id()
+            hashed_password=bcrypt_context.hash(new_user.password)
             )
-    USERS_DB.append(new_user)
-    return new_user
+    with Session() as sess:
+        try:
+            sess.execute(insert_orm_statement)
+            sess.commit()
+        except Exception as e:
+            print(f"register_new_user: {e}")
 
 
 def authenticate_user(username, password):
     """ Validate username;Validate password """
 
     # Validate username
-    existing_user = None
-    for u in USERS_DB:
-        if u.username == username:
-            existing_user = u
-            break
+    existing_user = get_user_from_db(username)
     if existing_user is None:
         return None
 
@@ -115,7 +127,7 @@ def authenticate_user(username, password):
     if not bcrypt_context.verify(password, existing_user.hashed_password):
         return None
 
-    return u
+    return existing_user
 
 
 @app.post("/login", response_model=JWTToken)
@@ -136,33 +148,42 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
     return JWTToken(access_token=encoded_jwt, token_type="Bearer")
 
 
-# Read
+# READ - SELECT
 @app.get("/me", status_code=status.HTTP_200_OK)
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
     """ Get my user information """
     return current_user
 
 
-# Update
+# UPDATE - SELECT - UPDATE
 @app.put("/update", status_code=status.HTTP_204_NO_CONTENT)
 async def update_me(current_user: Annotated[User, Depends(get_current_user)], updated_user: UserRequest):
     """ Update my user information """
     print(f"Update user: {updated_user}")
-    if get_user_from_db(updated_user.username) is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username exists")
-    current_user.username = updated_user.username
-    current_user.hashed_password = bcrypt_context.hash(updated_user.password)
-    current_user.email = updated_user.email
+    orm_update_statement = update(User).where(User.username == current_user.username).values(
+            username=updated_user.username,
+            email=updated_user.email,
+            hashed_password=bcrypt_context.hash(updated_user.password)
+            )
+    with Session() as sess:
+        try:
+            sess.execute(orm_update_statement)
+            sess.commit()
+        except Exception as e:
+            print(f"update_me: {e}")
 
 
-# Delete
 def delete_user(username):
-    for i in range(len(USERS_DB)):
-        if USERS_DB[i].username == username:
-            USERS_DB.pop(i)
-            break
+    orm_delete_statement = delete(User).where(User.username == username)
+    with Session() as sess:
+        try:
+            sess.execute(orm_delete_statement)
+            sess.commit()
+        except Exception as e:
+            print(f"delete_user: {e}")
 
 
+# DELETE - DELETE
 @app.put("/delete", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_me(current_user: Annotated[User, Depends(get_current_user)]):
     """ Delete my user record """
