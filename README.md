@@ -1,3 +1,22 @@
+# File structure
+
+Projects implemented in order with incremental challenge:
+
+1. `books_v1`
+
+2. `books_v1`
+
+3. `authentication`
+
+4. `user_management`
+
+5. `sql_alchemy`
+
+6. `todos`
+
+7. `movies`
+
+
 # Some theory
 
 ## Abstraction
