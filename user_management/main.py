@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends, HTTPException
+from fastapi import FastAPI, status, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel, Field
 from typing import Annotated
@@ -8,6 +8,9 @@ from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, sessionmaker
 from sqlalchemy import Integer, String, Boolean, create_engine, select, insert, update, delete
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 ALGORITHM = "HS256"
 SECRET_KEY = "48e3e8917fc1aa0569121e0b95923ef8e9978e7cacb7f113968bed6942788f83"
@@ -52,19 +55,26 @@ class UserRequest(BaseModel):
 Base.metadata.create_all(bind=engine)
 Session = sessionmaker(engine)
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # READ - SELECT
-@app.get("/")
-async def get_users():
-    """ Return the usersDB - unprotected endpoint """
-    with Session() as sess:
-        orm_statement = select(User)
-        try:
-            result = sess.execute(orm_statement)
-            return result.scalars().all()
-        except Exception as e:
-            print(f"get_users(): {e}")
+@app.get("/", response_class=HTMLResponse)
+async def homepage(request: Request):
+    return templates.TemplateResponse(request=request, name="homepage.html")
+
+
+# @app.get("/")
+# async def get_users():
+#     """ Return the usersDB - unprotected endpoint """
+#     with Session() as sess:
+#         orm_statement = select(User)
+#         try:
+#             result = sess.execute(orm_statement)
+#             return result.scalars().all()
+#         except Exception as e:
+#             print(f"get_users(): {e}")
 
 
 def get_user_from_db(username):
@@ -96,6 +106,12 @@ async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(to
 
 
 # CREATE - INSERT
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request):
+    """ Server the registration page """
+    return templates.TemplateResponse(request=request, name="register.html")
+
+
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_new_user(new_user: UserRequest):
     """ Register new user and add to the database """
@@ -128,6 +144,12 @@ def authenticate_user(username, password):
         return None
 
     return existing_user
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """ Serves the login page """
+    return templates.TemplateResponse(request=request, name="login.html")
 
 
 @app.post("/login", response_model=JWTToken)
