@@ -112,3 +112,77 @@ span.psw {
     width: 100%;
   }
 }
+
+/* Style for the main container */
+.profile-container {
+    padding: 20px;
+    margin: 20px auto; /* Center the container */
+    max-width: 600px; /* Limit the width */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+/* Style for the heading */
+.profile-header h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Style for individual profile information sections */
+.profile-info {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.profile-info:last-child {
+    border-bottom: none;
+}
+
+/* Style for the labels (e.g., "Username:", "Email:") */
+.profile-label {
+    font-weight: bold;
+    color: #555;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Style for the information itself (e.g., the actual username, email) */
+.profile-value {
+    color: #333;
+    display: block;
+    padding: 8px 0;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding-left: 10px;
+}
+
+/* Style for the active status */
+.profile-active {
+    font-weight: bold;
+    color: green;
+}
+
+.profile-inactive {
+    font-weight: bold;
+    color: red;
+}
+
+/* Style for links within the profile */
+.profile-link {
+    display: inline-block;
+    margin-top: 20px;
+    color: dodgerblue;
+    text-decoration: none;
+    padding: 10px 15px;
+    border: 1px solid dodgerblue;
+    border-radius: 5px;
+    background-color: white;
+}
+
+.profile-link:hover {
+    background-color: #e7f3ff;
+}

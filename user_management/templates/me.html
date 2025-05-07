@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Your Profile{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>Your Profile</h1>
+    </div>
+
+    <div class="profile-info">
+        <span class="profile-label">Username:</span>
+        <span class="profile-value">{{ user.username }}</span>
+    </div>
+
+    <div class="profile-info">
+        <span class="profile-label">Email:</span>
+        <span class="profile-value">{{ user.email }}</span>
+    </div>
+
+    <div class="profile-info">
+        <span class="profile-label">ID:</span>
+        <span class="profile-value">{{ user.id }}</span>
+    </div>
+
+    <div class="profile-info">
+        <span class="profile-label">Active:</span>
+        {% if user.active %}
+        <span class="profile-value profile-active">Yes</span>
+        {% else %}
+        <span class="profile-value profile-inactive">No</span>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
