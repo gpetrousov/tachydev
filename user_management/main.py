@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends, HTTPException, Request
+from fastapi import FastAPI, status, Depends, HTTPException, Request, Form
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel, Field
 from typing import Annotated
@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, sessionmaker
 from sqlalchemy import Integer, String, Boolean, create_engine, select, insert, update, delete
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 ALGORITHM = "HS256"
@@ -96,12 +96,12 @@ async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(to
 # CREATE - INSERT
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    """ Server the registration page """
+    """ Serve the registration page """
     return templates.TemplateResponse(request=request, name="register.html")
 
 
 @app.post("/register", status_code=status.HTTP_201_CREATED)
-async def register_new_user(new_user: UserRequest):
+async def register_new_user(new_user: Annotated[UserRequest, Form()]):
     """ Register new user and add to the database """
     existing_user = get_user_from_db(new_user.username)
     if existing_user:
@@ -115,6 +115,7 @@ async def register_new_user(new_user: UserRequest):
         try:
             sess.execute(insert_orm_statement)
             sess.commit()
+            return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
         except Exception as e:
             print(f"register_new_user: {e}")
 
