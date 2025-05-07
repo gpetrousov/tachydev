@@ -1,17 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    {% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/style.css" />
-    <title>{% block title %}{% endblock %} - My Webpage</title>
+    <title>{% block title %}{% endblock %} - User management</title>
+    {% block head %}
+        <style type="text/css">
+            .important { color: #336699; }
+        </style>
     {% endblock %}
 </head>
 <body>
-    <div id="content">{% block content %}{% endblock %}</div>
-    <div id="footer">
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+    <footer>
         {% block footer %}
         &copy; Copyright 2025 by <a href="http://petrousoft.com">PetrouSoft</a>.
         {% endblock %}
-    </div>
+    </footer>
 </body>
 </html>

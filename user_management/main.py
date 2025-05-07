@@ -65,18 +65,6 @@ async def homepage(request: Request):
     return templates.TemplateResponse(request=request, name="homepage.html")
 
 
-# @app.get("/")
-# async def get_users():
-#     """ Return the usersDB - unprotected endpoint """
-#     with Session() as sess:
-#         orm_statement = select(User)
-#         try:
-#             result = sess.execute(orm_statement)
-#             return result.scalars().all()
-#         except Exception as e:
-#             print(f"get_users(): {e}")
-
-
 def get_user_from_db(username):
     orm_statement = select(User).where(User.username == username)
     with Session() as sess:
@@ -146,6 +134,16 @@ def authenticate_user(username, password):
     return existing_user
 
 
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    """ Custom HTTPException handler for credentials error. """
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Credentials Error."}, status_code=exc.status_code)
+
+    # For other HTTPExceptions, you might want to render a generic error page
+    return HTMLResponse(f"<h1>HTTP Error {exc.status_code}</h1><p>{exc.detail}</p>", status_code=exc.status_code)
+
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """ Serves the login page """
@@ -159,7 +157,7 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
     # Authenticate user
     user = authenticate_user(login_form.username, login_form.password)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong username or password.")
 
     # Create JWT token
     to_encrypt = {"sub": user.username}
