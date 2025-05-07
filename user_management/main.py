@@ -75,9 +75,12 @@ def get_user_from_db(username):
     return existing_user
 
 
-async def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="login"))]):
+async def get_current_user(request: Request):
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing access_token")
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="U/name missing.")
@@ -166,14 +169,17 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
     to_encrypt.update({"exp": exp_time})
     encoded_jwt = jwt.encode(to_encrypt, SECRET_KEY, ALGORITHM)
 
-    return JWTToken(access_token=encoded_jwt, token_type="Bearer")
+    response = RedirectResponse("/?alert=Successfully Logged In", status_code=status.HTTP_302_FOUND)
+    response.set_cookie(key="access_token", value=encoded_jwt, httponly=True)
+
+    return response
 
 
 # READ - SELECT
-@app.get("/me", status_code=status.HTTP_200_OK)
-async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
+@app.get("/me", status_code=status.HTTP_200_OK, response_class=HTMLResponse)
+async def get_me(current_user: Annotated[User, Depends(get_current_user)], request: Request):
     """ Get my user information """
-    return current_user
+    return templates.TemplateResponse("me.html", {"request": request, "user": current_user})
 
 
 # UPDATE - SELECT - UPDATE
