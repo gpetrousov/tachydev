@@ -186,3 +186,73 @@ span.psw {
 .profile-link:hover {
     background-color: #e7f3ff;
 }
+
+/* Add these to your existing CSS or a new file */
+.profile-form {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input[type="email"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+    margin-bottom: 5px;
+}
+
+.form-text {
+    display: block;
+    font-size: 0.8em;
+    color: #777;
+    margin-top: 3px;
+}
+
+.profile-button {
+    background-color: #007bff; /* Bootstrap primary color */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.profile-button:hover {
+    background-color: #0056b3;
+}
+
+.profile-link-secondary {
+    display: inline-block;
+    margin-top: 10px;
+    color: #6c757d; /* Bootstrap secondary color */
+    text-decoration: none;
+    padding: 8px 12px;
+    border: 1px solid #6c757d;
+    border-radius: 5px;
+    background-color: white;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.profile-link-secondary:hover {
+    background-color: #e2e6ea;
+    color: #495057;
+}

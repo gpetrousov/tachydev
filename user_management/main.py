@@ -52,6 +52,13 @@ class UserRequest(BaseModel):
             }
 
 
+class UpdatedUserRequest(BaseModel):
+    email: str = Field(min_length=4)
+    current_password: str = Field(min_length=4)
+    new_password: str = Field(min_length=4)
+    confirm_new_password: str = Field(min_length=4)
+
+
 Base.metadata.create_all(bind=engine)
 Session = sessionmaker(engine)
 app = FastAPI()
@@ -183,14 +190,17 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)], reque
 
 
 # UPDATE - SELECT - UPDATE
-@app.put("/update", status_code=status.HTTP_204_NO_CONTENT)
-async def update_me(current_user: Annotated[User, Depends(get_current_user)], updated_user: UserRequest):
+@app.get("/update", response_class=HTMLResponse)
+async def update_page(current_user: Annotated[User, Depends(get_current_user)], request: Request):
+    return templates.TemplateResponse("update.html", {"request": request, "user": current_user})
+
+
+@app.post("/update", status_code=status.HTTP_204_NO_CONTENT, response_class=HTMLResponse)
+async def update_me(current_user: Annotated[User, Depends(get_current_user)], request: Request, updated_user: Annotated[UpdatedUserRequest, Form()]):
     """ Update my user information """
-    print(f"Update user: {updated_user}")
     orm_update_statement = update(User).where(User.username == current_user.username).values(
-            username=updated_user.username,
             email=updated_user.email,
-            hashed_password=bcrypt_context.hash(updated_user.password)
+            hashed_password=bcrypt_context.hash(updated_user.new_password)
             )
     with Session() as sess:
         try:

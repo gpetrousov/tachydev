@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Update Profile{% endblock %}
+
+{% block content %}
+    <div class="profile-container">
+        <div class="profile-header">
+            <h1>Update Profile</h1>
+        </div>
+
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+
+        {% if success %}
+            <p style="color: green;">{{ success }}</p>
+        {% endif %}
+
+        <form action="/update" method="post" class="profile-form">
+            <div class="form-group">
+                <label for="email">New Email Address:</label>
+                <input type="email" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="current_password">Current Password:</label>
+                <input type="password" id="current_password" name="current_password">
+                <small class="form-text text-muted">Required to change your password or confirm email update.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="new_password">New Password:</label>
+                <input type="password" id="new_password" name="new_password">
+                <small class="form-text text-muted">Leave blank if you don't want to change your password.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_new_password">Confirm New Password:</label>
+                <input type="password" id="confirm_new_password" name="confirm_new_password">
+                <small class="form-text text-muted">Retype your new password.</small>
+            </div>
+
+            <button type="submit" class="profile-button">Update Profile</button>
+            <a href="/me" class="profile-link-secondary">Back to Profile</a>
+        </form>
+    </div>
+{% endblock %}
