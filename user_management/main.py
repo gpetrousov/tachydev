@@ -145,16 +145,6 @@ def authenticate_user(username, password):
     return existing_user
 
 
-@app.exception_handler(HTTPException)
-async def custom_http_exception_handler(request: Request, exc: HTTPException):
-    """ Custom HTTPException handler for credentials error. """
-    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Credentials Error."}, status_code=exc.status_code)
-
-    # For other HTTPExceptions, you might want to render a generic error page
-    return HTMLResponse(f"<h1>HTTP Error {exc.status_code}</h1><p>{exc.detail}</p>", status_code=exc.status_code)
-
-
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """ Serves the login page """
@@ -162,13 +152,13 @@ async def login_page(request: Request):
 
 
 @app.post("/login", response_model=JWTToken)
-async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
+async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()], request: Request):
     """ Login and return JWT token """
 
     # Authenticate user
     user = authenticate_user(login_form.username, login_form.password)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong username or password.")
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Credentials Error."}, status_code=status.HTTP_401_UNAUTHORIZED)
 
     # Create JWT token
     to_encrypt = {"sub": user.username}
@@ -198,6 +188,17 @@ async def update_page(current_user: Annotated[User, Depends(get_current_user)], 
 @app.post("/update", status_code=status.HTTP_204_NO_CONTENT, response_class=HTMLResponse)
 async def update_me(current_user: Annotated[User, Depends(get_current_user)], request: Request, updated_user: Annotated[UpdatedUserRequest, Form()]):
     """ Update my user information """
+
+    # Verify current password matches old one
+    if not bcrypt_context.verify(updated_user.current_password, current_user.hashed_password):
+        print(">>>>>Current password not match")
+        return templates.TemplateResponse("update.html", {"request": request, "error": "Current password does not match.", "user": current_user}, status_code=status.HTTP_401_UNAUTHORIZED)
+
+    # Verify new password matches confirm new password
+    if updated_user.new_password != updated_user.confirm_new_password:
+        print(">>>>>New password not match")
+        return templates.TemplateResponse("update.html", {"request": request, "error": "New password does not match Confirmation.", "user": current_user}, status_code=status.HTTP_401_UNAUTHORIZED)
+
     orm_update_statement = update(User).where(User.username == current_user.username).values(
             email=updated_user.email,
             hashed_password=bcrypt_context.hash(updated_user.new_password)
@@ -208,6 +209,8 @@ async def update_me(current_user: Annotated[User, Depends(get_current_user)], re
             sess.commit()
         except Exception as e:
             print(f"update_me: {e}")
+
+    return templates.TemplateResponse("login.html", {"request": request}, status_code=status.HTTP_302_FOUND)
 
 
 def delete_user(username):
